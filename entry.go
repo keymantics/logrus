@@ -3,6 +3,7 @@ package logrus
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"sync"
 	"time"
@@ -96,14 +97,17 @@ func (entry Entry) log(level Level, msg string) {
 
 	entry.fireHooks()
 
-	buffer = bufferPool.Get().(*bytes.Buffer)
-	buffer.Reset()
-	defer bufferPool.Put(buffer)
-	entry.Buffer = buffer
+	// When out is /dev/null, you can stop process
+	if entry.Logger.Out != nil && entry.Logger.Out != ioutil.Discard {
+		buffer = bufferPool.Get().(*bytes.Buffer)
+		buffer.Reset()
+		defer bufferPool.Put(buffer)
+		entry.Buffer = buffer
 
-	entry.write()
+		entry.write()
 
-	entry.Buffer = nil
+		entry.Buffer = nil
+	}
 
 	// To avoid Entry#log() returning a value that only would make sense for
 	// panic() to use in Entry#Panic(), we avoid the allocation by checking
